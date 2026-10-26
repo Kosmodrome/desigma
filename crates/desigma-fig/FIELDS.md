@@ -11,6 +11,10 @@ private local copies and are never committed. "Confirmed" means seen in at
 least one of them. "Unconfirmed" means the name is a guess (kept because it is
 harmless when absent) or was never present in these files.
 
+A third file, a game UI file (`game-ui.fig`, about 47k node changes, container
+version 106, private as well), was checked node by node against the REST API's
+JSON for the same file; rows that say "the third file" refer to it.
+
 Dump any file with `cargo run --release -p desigma-fig --example fig2json -- file.fig`
 and render its frames with `--example fig_render`.
 
