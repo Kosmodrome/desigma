@@ -277,7 +277,7 @@ fn component_props(doc: &Document, node: &Node, m: &mut Map<String, Value>) {
         let mut vals = Map::new();
         let comp = doc.get(c);
         if comp.and_then(|c| c.parent).and_then(|p| doc.get(p)).is_some_and(|p| matches!(p.kind, NodeKind::ComponentSet(_))) {
-            for (k, v) in parse_variant_name(&comp.map(|c| c.name.as_str()).unwrap_or_default()) {
+            for (k, v) in parse_variant_name(comp.map(|c| c.name.as_str()).unwrap_or_default()) {
                 vals.insert(k, json!({"type": "VARIANT", "value": v}));
             }
         }
