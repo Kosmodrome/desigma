@@ -183,7 +183,7 @@ fn empty_state(h: &Home, ui: &Ui, area: Rect) {
         (format!("No files match \u{201c}{}\u{201d}", h.search.trim()), "Try a different name.".to_string())
     } else {
         match &h.section {
-            Section::Recents => ("No files yet".into(), "Create a design file, or import a .fig, .svg or .desigma file to get started.".into()),
+            Section::Recents => ("No files yet".into(), "Create a design file, or import a .fig, .pen, .svg or .desigma file to get started.".into()),
             Section::Starred => ("Nothing starred".into(), "Right-click a file and choose Star to keep it handy here.".into()),
             Section::Project(..) => ("This project is empty".into(), "Create a design file here, or drag files in from other projects.".into()),
             Section::Trash => ("Trash is empty".into(), "Files and projects you delete wait here until you empty the trash.".into()),

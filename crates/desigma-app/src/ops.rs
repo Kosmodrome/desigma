@@ -852,13 +852,20 @@ impl App {
         if !self.leave_ok(move |app| app.open_path(again)) {
             return;
         }
-        match io::load_path(&p) {
-            Ok(doc) => {
+        match io::load_path_noted(&p) {
+            Ok((doc, notes)) => {
                 let name = doc.name.clone();
                 // An SVG becomes a new unsaved document, never overwritten by Save.
                 let svg = p.extension().is_some_and(|e| e.eq_ignore_ascii_case("svg"));
                 self.replace_document(doc, (!svg).then_some(p));
-                self.show_toast(format!("Opened {name}"), false);
+                match notes.split_first() {
+                    None => self.show_toast(format!("Opened {name}"), false),
+                    // What an import left out, so a missing script or icon is not a surprise.
+                    Some((first, rest)) => {
+                        let more = if rest.is_empty() { String::new() } else { format!(" (and {} more)", rest.len()) };
+                        self.show_toast(format!("Opened {name}. Not carried over: {first}{more}"), false);
+                    }
+                }
             }
             Err(e) => self.show_toast(e, true),
         }

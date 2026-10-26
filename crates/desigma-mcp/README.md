@@ -71,7 +71,7 @@ Imports are limited to 64 MiB per file, 100,000 layers, and 256 levels of nestin
 
 | Tool | Purpose |
 | --- | --- |
-| `desigma_open_file` | Import a native `.desigma`, `.fig`, SVG, or supported JSON design into the session. |
+| `desigma_open_file` | Import a native `.desigma`, `.fig`, `.pen` (Pencil), SVG, or supported JSON design into the session. |
 | `desigma_new_document` | Start an empty document with one page. |
 | `desigma_save_file` | Write the session to a new native `.desigma` file. |
 | `desigma_get_document` | Read document name, pages, counts, undo/redo availability, and `session` (`"file"` or `"editor"`). |
