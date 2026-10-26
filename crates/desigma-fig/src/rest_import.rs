@@ -1219,7 +1219,7 @@ impl Ctx {
         n.id = id;
         n.children.clear();
         n.parent = None;
-        n.source_id = orig.source_id.as_ref().map(|s| format!("I{prefix};{s}"));
+        n.source_id = orig.source_id.as_ref().map(|s| instance_copy_id(prefix, s));
         n.component.source = Some(src);
         n.component.overrides.clear();
         n.component.props.clear();
@@ -1483,6 +1483,15 @@ fn style_meta(styles: Option<&Value>, doc: &Document) -> BTreeMap<String, StyleM
 /// Property name without Figma's `#<id>` suffix.
 fn prop_name(key: &str) -> String {
     key.split('#').next().unwrap_or(key).to_string()
+}
+
+/// REST id of `src` copied into the instance `inst`: one `I` and the flat
+/// guid path, as Figma writes it (`I<inst>;<a>;<b>`), also when `inst` or
+/// `src` is itself a copy inside another instance.
+fn instance_copy_id(inst: &str, src: &str) -> String {
+    let inst = inst.strip_prefix('I').unwrap_or(inst);
+    let src = src.strip_prefix('I').unwrap_or(src);
+    format!("I{inst};{src}")
 }
 
 /// For an id inside an instance copy (`I<inst>;<a>;<b>`), the id of the node
