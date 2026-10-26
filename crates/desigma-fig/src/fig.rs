@@ -376,6 +376,9 @@ fn convert_node(nc: &Value, id: &str, lk: &Lk) -> Option<Map<String, Value>> {
         "SYMBOL" => "COMPONENT",
         "ROUNDED_RECTANGLE" => "RECTANGLE",
         "FRAME" if nc.get("isStateGroup").and_then(Value::as_bool) == Some(true) => "COMPONENT_SET",
+        // Groups are stored as frames that resize to fit their children
+        // (and, unlike hugging auto-layout frames, have no stack mode).
+        "FRAME" if nc.get("resizeToFit").and_then(Value::as_bool) == Some(true) && matches!(fstr(nc, "stackMode"), None | Some("NONE")) => "GROUP",
         other => other,
     };
     let mut m = Map::new();
