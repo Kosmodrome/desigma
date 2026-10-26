@@ -1,6 +1,8 @@
 //! Component property values from `.fig` files: newer files keep defaults and
 //! instance assignments only in a typed `varValue`, older ones in a plain
 //! `initialValue` / `value`. Both must reach the instance and its copies.
+//! Children bind to properties through `componentPropRefs` or, in newer
+//! files, through PROP_REF entries of `parameterConsumptionMap`.
 
 use desigma_doc::*;
 use desigma_fig::container::Compression;
@@ -44,7 +46,7 @@ fn var_value_defaults_are_read() {
 fn assignments_apply_in_both_shapes() {
     let doc = import_fig(&prop_values_fig(Compression::Zstd)).unwrap();
     let users = find(&doc, "Icon / users");
-    for (name, label) in [("Card A", "Buy"), ("Card B", "Old")] {
+    for (name, label) in [("Card A", "Buy"), ("Card B", "Old"), ("Card C", "New")] {
         let card = find(&doc, name);
         assert_eq!(card.component.values.get("Show badge"), Some(&PropValue::Bool(false)), "{name}");
         assert_eq!(card.component.values.get("Icon"), Some(&PropValue::Instance(users.id)), "{name}");
