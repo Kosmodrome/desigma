@@ -1162,6 +1162,21 @@ impl Ctx {
             *component_key = None;
         }
         self.expand_instance(d, target);
+        // The fresh children are at 1x; a slot made with the scale tool keeps its scale.
+        if let Some(s) = self.scale_of(d) {
+            self.scale_contents(d, s);
+        }
+    }
+
+    /// `uniformScaleFactor` of `id`, or of the node an instance copy was made from.
+    fn scale_of(&self, mut id: NodeId) -> Option<f32> {
+        for _ in 0..MAX_DEPTH {
+            if let Some(s) = self.scales.get(&id) {
+                return Some(*s);
+            }
+            id = self.doc.get(id)?.component.source?;
+        }
+        None
     }
 
     /// `.fig` library components of internal-only canvases become external
