@@ -84,6 +84,40 @@ fn maps_property_definitions_values_and_references() {
 }
 
 #[test]
+fn rest_export_writes_component_properties() {
+    let doc = import_rest_json(&file().to_string()).unwrap();
+    let out = desigma_fig::export_rest_json(&doc);
+    let mut by_id = std::collections::HashMap::new();
+    let mut stack = vec![&out["document"]];
+    while let Some(n) = stack.pop() {
+        if let Some(id) = n["id"].as_str() {
+            by_id.insert(id.to_string(), n);
+        }
+        stack.extend(n["children"].as_array().into_iter().flatten());
+    }
+    let inst = by_id["2:1"];
+    assert_eq!(
+        inst["componentProperties"],
+        json!({
+            "Show icon": {"type": "BOOLEAN", "value": false},
+            "Label": {"type": "TEXT", "value": "Buy"},
+            "Size": {"type": "VARIANT", "value": "Small"},
+            "Swap": {"type": "INSTANCE_SWAP", "value": "1:2"}
+        })
+    );
+    let defs = &by_id["1:1"]["componentPropertyDefinitions"];
+    assert_eq!(defs["Show icon"], json!({"type": "BOOLEAN", "defaultValue": true}));
+    assert_eq!(defs["Size"], json!({"type": "VARIANT", "defaultValue": "Small", "variantOptions": ["Small", "Large"]}));
+    assert_eq!(defs["Swap"], json!({"type": "INSTANCE_SWAP", "defaultValue": "1:2"}));
+    assert_eq!(by_id["1:4"]["componentPropertyReferences"], json!({"characters": "Label"}));
+    assert_eq!(by_id["I2:1;1:5"]["componentPropertyReferences"], json!({"visible": "Show icon"}));
+
+    // Exported properties import back to the same values.
+    let again = import_rest_json(&out.to_string()).unwrap();
+    assert_eq!(find(&again, "Btn instance").component.values, find(&doc, "Btn instance").component.values);
+}
+
+#[test]
 fn links_children_and_records_rest_overrides() {
     let mut doc = import_rest_json(&file().to_string()).unwrap();
     let comp = find(&doc, "Size=Small").clone();
