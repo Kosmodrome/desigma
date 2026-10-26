@@ -1099,27 +1099,6 @@ pub fn nested_swap_fig(how: Compression) -> Vec<u8> {
     container::write_container(&schema.encode(), &body, how, 101)
 }
 
-/// Groups (see `tests/fig_groups.rs`): `.fig` has no GROUP type, a group is a
-/// FRAME with `resizeToFit`. "Hug" also resizes to fit but is an auto-layout
-/// frame; "Plain" is an ordinary frame.
-pub fn groups_fig(how: Compression) -> Vec<u8> {
-    let doc = node((0, 0), (0, 0), "!", "DOCUMENT", "Document", vec![]);
-    let page = node((0, 1), (0, 0), "a", "CANVAS", "Page 1", vec![]);
-    let frame = |l: u32, pos: &str, name: &str, mut extra: Vec<(&'static str, V)>| {
-        let mut f = vec![("size", vec2(40.0, 40.0)), ("transform", matrix(10.0 * l as f32, 0.0))];
-        f.append(&mut extra);
-        node((3, l), (0, 1), pos, "FRAME", name, f)
-    };
-    let rect = |l: u32, parent: u32| node((3, l), (3, parent), "a", "ROUNDED_RECTANGLE", "Box", vec![("size", vec2(40.0, 40.0))]);
-    let group = frame(1, "a", "Group 1", vec![("resizeToFit", V::Bool(true))]);
-    let hug = frame(2, "b", "Hug", vec![("resizeToFit", V::Bool(true)), ("stackMode", en("VERTICAL"))]);
-    let plain = frame(3, "c", "Plain", vec![]);
-    let body = msg(vec![("nodeChanges", V::Array(vec![doc, page, group, hug, plain, rect(11, 1), rect(12, 2), rect(13, 3)])), ("blobs", V::Array(vec![]))]);
-    let schema = figma_like_schema();
-    let root = schema.find("Message").unwrap();
-    container::write_container(&schema.encode(), &schema.encode_message(root, &body).unwrap(), how, 106)
-}
-
 // ---- Figma Motion fixture (see `tests/motion_import.rs`); all values are made up.
 
 fn bezier(a: f32, b: f32, c: f32, d: f32) -> V {
@@ -1342,4 +1321,25 @@ pub fn motion_fig(how: Compression) -> Vec<u8> {
     let root = schema.find("Message").unwrap();
     let body = schema.encode_message(root, &motion_message()).unwrap();
     container::write_container(&schema.encode(), &body, how, 101)
+}
+
+/// Groups (see `tests/fig_groups.rs`): `.fig` has no GROUP type, a group is a
+/// FRAME with `resizeToFit`. "Hug" also resizes to fit but is an auto-layout
+/// frame; "Plain" is an ordinary frame.
+pub fn groups_fig(how: Compression) -> Vec<u8> {
+    let doc = node((0, 0), (0, 0), "!", "DOCUMENT", "Document", vec![]);
+    let page = node((0, 1), (0, 0), "a", "CANVAS", "Page 1", vec![]);
+    let frame = |l: u32, pos: &str, name: &str, mut extra: Vec<(&'static str, V)>| {
+        let mut f = vec![("size", vec2(40.0, 40.0)), ("transform", matrix(10.0 * l as f32, 0.0))];
+        f.append(&mut extra);
+        node((3, l), (0, 1), pos, "FRAME", name, f)
+    };
+    let rect = |l: u32, parent: u32| node((3, l), (3, parent), "a", "ROUNDED_RECTANGLE", "Box", vec![("size", vec2(40.0, 40.0))]);
+    let group = frame(1, "a", "Group 1", vec![("resizeToFit", V::Bool(true))]);
+    let hug = frame(2, "b", "Hug", vec![("resizeToFit", V::Bool(true)), ("stackMode", en("VERTICAL"))]);
+    let plain = frame(3, "c", "Plain", vec![]);
+    let body = msg(vec![("nodeChanges", V::Array(vec![doc, page, group, hug, plain, rect(11, 1), rect(12, 2), rect(13, 3)])), ("blobs", V::Array(vec![]))]);
+    let schema = figma_like_schema();
+    let root = schema.find("Message").unwrap();
+    container::write_container(&schema.encode(), &schema.encode_message(root, &body).unwrap(), how, 106)
 }
