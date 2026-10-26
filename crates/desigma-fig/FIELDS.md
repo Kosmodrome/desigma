@@ -81,7 +81,7 @@ and render its frames with `--example fig_render`.
 | Nested instance swap | override entry `{guidPath: [<slot>], overriddenSymbolID: <SYMBOL guid>}` replaces the nested instance's component; deeper entries under `[<slot>, ...]` then address the swapped component's children | confirmed (product UI file: list rows swapping their icon slot) |
 | Override paints bound to variables | `fillPaints` / `strokePaints` inside an override entry carry `colorVar` like node paints do; the literal `color` beside the alias can be stale (a dark-theme text override stored `#0A0A0A` next to an alias whose value is near-white), so the variable's value wins | confirmed (product UI file: dark-theme instances recolouring component text) |
 | Derived data | per path: `size`, `transform`, `fillGeometry`, `strokeGeometry` | confirmed |
-| Scale | `uniformScaleFactor` != 1 on instances made with the scale tool: copied contents scale by it | confirmed |
+| Scale | `uniformScaleFactor` != 1 on instances made with the scale tool: copied contents scale by it, also after a swap rebuilds a nested instance (the third file has nested slots at 0.875 and 2) | confirmed |
 | Property defs | `componentPropDefs [{id, name, type BOOL/TEXT/VARIANT/INSTANCE_SWAP, initialValue {boolValue / textValue{characters} / guidValue}, varValue, preferredValues, sortPosition}]` on the set; variants carry bare `{id, parentPropDefId}` aliases | confirmed |
 | Property values | instance `componentPropAssignments [{defID, value {boolValue / textValue / guidValue}, varValue}]` | confirmed |
 | Property refs | node `componentPropRefs [{defID, componentPropNodeField VISIBLE / TEXT_DATA / OVERRIDDEN_SYMBOL_ID}]`, with `parameterConsumptionMap` repeating them. All defIDs go through `parentPropDefId` | confirmed |
