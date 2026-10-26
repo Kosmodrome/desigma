@@ -1235,11 +1235,23 @@ impl Ctx {
         if !self.doc.get(inst).map(|n| n.children.is_empty()).unwrap_or(false) || self.doc.is_ancestor(comp, inst) || comp == inst {
             return;
         }
-        let prefix = self.doc.get(inst).and_then(|n| n.source_id.clone()).unwrap_or_default();
+        let prefix = self.rest_key(inst).unwrap_or_default();
         let kids = self.doc.get(comp).map(|n| n.children.clone()).unwrap_or_default();
         let mut budget = 50_000usize;
         for k in kids {
             self.clone_subtree(k, inst, &prefix, &mut budget, 0);
+        }
+    }
+
+    /// The id a node contributes to instance-copy ids. A node of a library
+    /// component copy is addressed by its library-side id (`.fig`
+    /// overrideKey), as Figma's REST ids are; a copy already carries its full
+    /// `I...` path.
+    fn rest_key(&self, node: NodeId) -> Option<String> {
+        let sid = self.doc.get(node)?.source_id.clone();
+        match sid {
+            Some(s) if s.starts_with('I') => Some(s),
+            other => self.override_keys.get(&node).cloned().or(other),
         }
     }
 
@@ -1254,7 +1266,7 @@ impl Ctx {
         n.id = id;
         n.children.clear();
         n.parent = None;
-        n.source_id = orig.source_id.as_ref().map(|s| instance_copy_id(prefix, s));
+        n.source_id = self.rest_key(src).map(|s| instance_copy_id(prefix, &s));
         n.component.source = Some(src);
         n.component.overrides.clear();
         n.component.props.clear();
