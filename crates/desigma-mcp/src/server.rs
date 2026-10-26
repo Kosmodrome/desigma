@@ -278,7 +278,7 @@ impl DesigmaServer {
 pub fn tools() -> Vec<Tool> {
     let mut raw = crate::engine::tools();
     for (name, description, properties, required) in [
-        ("desigma_open_file", "Open a .desigma, .fig, SVG or Figma REST JSON file inside the workspace: in the editor when its agent bridge is on, otherwise into the isolated file session. Refuses while the session (or the editor) has unsaved edits; ask the user to save, or pass discard_changes=true to throw them away.", json!({"path":{"type":"string"},"discard_changes":{"type":"boolean","default":false}}), vec!["path"]),
+        ("desigma_open_file", "Open a .desigma, .fig, .pen (Pencil), SVG or Figma REST JSON file inside the workspace: in the editor when its agent bridge is on, otherwise into the isolated file session. Refuses while the session (or the editor) has unsaved edits; ask the user to save, or pass discard_changes=true to throw them away.", json!({"path":{"type":"string"},"discard_changes":{"type":"boolean","default":false}}), vec!["path"]),
         ("desigma_save_file", "Save the document to a NEW .desigma file inside the workspace (in the editor: a copy; its own file path is unchanged). Existing files are never overwritten. Parent directory must exist.", json!({"path":{"type":"string"}}), vec!["path"]),
         ("desigma_new_document", "Start a blank document with one page. Refuses while the session (or the editor) has unsaved edits; ask the user to save, or pass discard_changes=true to throw them away.", json!({"name":{"type":"string","minLength":1,"maxLength":1024},"discard_changes":{"type":"boolean","default":false}}), vec!["name"]),
     ] {

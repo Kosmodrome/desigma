@@ -7,11 +7,25 @@ pub const NATIVE_EXT: &str = "desigma";
 
 /// Loads a document from disk, dispatching on the file extension.
 pub fn load_path(path: &Path) -> Result<Document, String> {
+    load_path_noted(path).map(|(doc, _)| doc)
+}
+
+/// [`load_path`], plus notes on what an import could not carry over (empty for every format
+/// but `.pen`).
+pub fn load_path_noted(path: &Path) -> Result<(Document, Vec<String>), String> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
+    let mut notes = Vec::new();
     let mut doc = match ext.as_str() {
         "fig" => {
             let bytes = std::fs::read(path).map_err(|e| format!("Cannot read {}: {e}", path.display()))?;
             desigma_fig::import_fig(&bytes).map_err(|e| format!("Cannot import .fig: {e}"))?
+        }
+        "pen" => {
+            let bytes = std::fs::read(path).map_err(|e| format!("Cannot read {}: {e}", path.display()))?;
+            let opts = desigma_pen::Options { base_dir: path.parent().map(Path::to_path_buf), ..Default::default() };
+            let import = desigma_pen::import_with(&bytes, &opts).map_err(|e| format!("Cannot import .pen: {e}"))?;
+            notes = import.warnings;
+            import.document
         }
         "json" => {
             let text = std::fs::read_to_string(path).map_err(|e| format!("Cannot read {}: {e}", path.display()))?;
@@ -37,7 +51,7 @@ pub fn load_path(path: &Path) -> Result<Document, String> {
         doc.name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("Untitled").to_string();
     }
     ensure_page(&mut doc);
-    Ok(doc)
+    Ok((doc, notes))
 }
 
 pub fn ensure_page(doc: &mut Document) {
@@ -60,8 +74,9 @@ pub fn save_path(doc: &Document, path: &Path) -> Result<PathBuf, String> {
 
 pub fn pick_open() -> Option<PathBuf> {
     rfd::FileDialog::new()
-        .add_filter("Design files", &["fig", "json", "desigma", "svg"])
+        .add_filter("Design files", &["fig", "pen", "json", "desigma", "svg"])
         .add_filter("Figma file", &["fig"])
+        .add_filter("Pencil file", &["pen"])
         .add_filter("SVG", &["svg"])
         .add_filter("JSON", &["json"])
         .add_filter("desigma", &[NATIVE_EXT])
@@ -133,6 +148,28 @@ mod tests {
         assert_eq!(page.name, "Page 1");
         assert_eq!(page.children.len(), 1);
         assert_eq!(d.get(page.children[0]).unwrap().name, d.name);
+    }
+
+    #[test]
+    fn pen_loads_with_notes_and_is_not_saved_back() {
+        let p = tmp("design.pen");
+        std::fs::write(
+            &p,
+            r##"{"version":"2.21","children":[{"id":"a","type":"frame","name":"Card","width":80,"height":40,"fill":"#FF0000","children":[{"id":"s","type":"script","width":10,"height":10}]}]}"##,
+        )
+        .unwrap();
+        let (d, notes) = load_path_noted(&p).unwrap();
+        std::fs::remove_file(&p).ok();
+        assert!(d.name.ends_with("design"));
+        let page = d.get(d.pages[0]).unwrap();
+        assert_eq!(page.children.len(), 1);
+        assert_eq!(d.get(page.children[0]).unwrap().name, "Card");
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("script"));
+        let bad = tmp("bad.pen");
+        std::fs::write(&bad, [0u8, 1, 2]).unwrap();
+        assert!(load_path(&bad).unwrap_err().contains("Cannot import .pen"));
+        std::fs::remove_file(&bad).ok();
     }
 
     #[test]

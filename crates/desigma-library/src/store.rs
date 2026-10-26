@@ -125,12 +125,16 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 /// Loads a document from any importable file: `.desigma` / `.json` (native or
-/// Figma REST), `.fig` or `.svg`.
+/// Figma REST), `.fig`, `.pen` (Pencil) or `.svg`.
 pub fn load_external(path: &Path) -> Result<Document> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase();
     let invalid = |m: String| LibraryError::Invalid(m);
     let mut doc = match ext.as_str() {
         "fig" => desigma_fig::import_fig(&std::fs::read(path)?).map_err(|e| invalid(format!("Cannot import .fig: {e}")))?,
+        "pen" => {
+            let opts = desigma_pen::Options { base_dir: path.parent().map(Path::to_path_buf), ..Default::default() };
+            desigma_pen::import_with(&std::fs::read(path)?, &opts).map_err(|e| invalid(format!("Cannot import .pen: {e}")))?.document
+        }
         "svg" => {
             let text = std::fs::read_to_string(path)?;
             let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("svg");
@@ -511,7 +515,7 @@ impl Library {
         entry.thumbnail.as_ref().map(|r| self.path(r)).filter(|p| p.exists())
     }
 
-    /// Copies a `.desigma` file, or converts a `.fig` / `.json` / `.svg`, into a project.
+    /// Copies a `.desigma` file, or converts a `.fig` / `.pen` / `.json` / `.svg`, into a project.
     pub fn import_file(&self, path: &Path, project: &str, folder: Option<&str>) -> Result<FileEntry> {
         let doc = load_external(path)?;
         let stem = path.file_stem().and_then(|s| s.to_str()).filter(|s| !s.is_empty());
@@ -697,6 +701,24 @@ mod tests {
             d.insert(page, Node::rectangle(id, Rect::new(i as f32, 0.0, 10.0, 10.0))).unwrap();
         }
         d
+    }
+
+    #[test]
+    fn pen_files_import_into_a_project() {
+        let (_t, lib) = Tmp::new();
+        let p = lib.create_project("Pencil").unwrap();
+        let dir = std::env::temp_dir().join(format!("desigma_pen_src_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let src = dir.join("hero.pen");
+        std::fs::write(&src, r##"{"version":"2.21","children":[{"id":"a","type":"rectangle","width":20,"height":10,"fill":"#00FF00"}]}"##).unwrap();
+        let entry = lib.import_file(&src, &p.id, None).unwrap();
+        assert_eq!(entry.name, "hero");
+        let d = lib.load_file(&entry.id).unwrap();
+        assert_eq!(d.nodes.len(), 2);
+        let bad = dir.join("bad.pen");
+        std::fs::write(&bad, "nope").unwrap();
+        assert!(lib.import_file(&bad, &p.id, None).is_err());
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
