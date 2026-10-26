@@ -27,7 +27,8 @@ and render its frames with `--example fig_render`.
 | Corners | `cornerRadius`, `rectangle{TopLeft,TopRight,BottomLeft,BottomRight}CornerRadius`, `rectangleCornerRadiiIndependent`, `cornerSmoothing` | confirmed |
 | Strokes | `strokePaints`, `strokeWeight`, `strokeAlign` (INSIDE/OUTSIDE/CENTER), `strokeCap` (only ROUND seen), `strokeJoin`, `dashPattern`, `border{Top,Right,Bottom,Left}Weight`, `borderStrokeWeightsIndependent`, `miterLimit` | confirmed |
 | Frames | `frameMaskDisabled` (absent = clips) | confirmed |
-| Auto layout | `stackMode` HORIZONTAL/VERTICAL, `stackSpacing`, `stackCounterSpacing`, `stackHorizontalPadding`, `stackVerticalPadding`, `stackPaddingRight`, `stackPaddingBottom`, `stackPrimaryAlignItems` (CENTER/MAX/SPACE_EVENLY), `stackCounterAlignItems`, `stackChildAlignSelf` (STRETCH/MAX/CENTER), `stackChildPrimaryGrow`, `stackReverseZIndex`, `resizeToFit` | confirmed |
+| Groups | no `GROUP` node type: a group is a `FRAME` with `resizeToFit: true` and no `stackMode`; imported as `GROUP` (all 274 checked against REST ids in a third file) | confirmed |
+| Auto layout | `stackMode` HORIZONTAL/VERTICAL, `stackSpacing`, `stackCounterSpacing`, `stackHorizontalPadding`, `stackVerticalPadding`, `stackPaddingRight`, `stackPaddingBottom`, `stackPrimaryAlignItems` (CENTER/MAX/SPACE_EVENLY), `stackCounterAlignItems`, `stackChildAlignSelf` (STRETCH/MAX/CENTER), `stackChildPrimaryGrow`, `stackReverseZIndex` | confirmed |
 | Auto layout sizing | `stackPrimarySizing`: only `FIXED` is ever written, absent means hug. `stackCounterSizing`: only `RESIZE_TO_FIT_WITH_IMPLICIT_SIZE` is written, absent means fixed. (Checked against stored sizes: absent primary hugs its children.) Fixed in this change; it used to read absent primary as fixed | confirmed |
 | Wrap / absolute / min-max | `stackWrap`, `stackPositioning`, `minSize` / `maxSize` | unconfirmed |
 | Star | `count`, `starInnerScale` | confirmed |
