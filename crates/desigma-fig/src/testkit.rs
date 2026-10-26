@@ -259,6 +259,7 @@ pub fn figma_like_schema() -> Schema {
             "TIMING",
             "VECTOR",
             "SYMBOL_ID",
+            "PROP_REF",
         ],
     );
     enum_def(
@@ -283,6 +284,9 @@ pub fn figma_like_schema() -> Schema {
             "MOTION_SCALE_Y",
             "MOTION_SHEAR",
             "MOTION_TRANSLATION_XY",
+            "VISIBLE",
+            "TEXT_DATA",
+            "OVERRIDDEN_SYMBOL_ID",
         ],
     );
     enum_def(&mut b, "PlaybackStyle", &["ONCE", "LOOP", "BOOMERANG"]);
@@ -352,6 +356,9 @@ pub fn figma_like_schema() -> Schema {
     b.field(vany, "boolValue", nat(Bool), false, 1);
     b.field(vany, "floatValue", nat(Float), false, 3);
     b.field(vany, "symbolIdValue", FieldType::Def(siv), false, 26);
+    let prv = b.define("PropRef", DefKind::Message);
+    b.field(prv, "defId", gt, false, 1);
+    b.field(vany, "propRefValue", FieldType::Def(prv), false, 27);
     b.field(vany, "textDataValue", tdt, false, 10);
     b.field(vany, "expressionValue", FieldType::Def(expr), false, 6);
     b.field(vany, "keyframeTrackParameterValue", ktpvt, false, 20);
@@ -1132,7 +1139,9 @@ pub fn nested_swap_fig(how: Compression) -> Vec<u8> {
 /// Component properties in both value shapes (see `tests/fig_prop_values.rs`):
 /// "Card" defines a boolean, an instance-swap and a text property with
 /// `varValue` defaults; "Card A" assigns them through `varValue` only (newer
-/// files), "Card B" through the plain `value` (older files).
+/// files), "Card B" through the plain `value` (older files). "Card 2" binds
+/// its children through `parameterConsumptionMap` instead of
+/// `componentPropRefs`, and "Card C" is its instance.
 pub fn prop_values_message() -> V {
     let doc = node((0, 0), (0, 0), "!", "DOCUMENT", "Document", vec![]);
     let page = node((0, 1), (0, 0), "a", "CANVAS", "Page 1", vec![]);
@@ -1203,8 +1212,65 @@ pub fn prop_values_message() -> V {
         ],
     );
 
+    // "Card 2" binds the same kinds of properties the newer way: no
+    // `componentPropRefs`, a PROP_REF entry in `parameterConsumptionMap`.
+    let pcm = |l: u32, field: &str, resolved: &str| {
+        let data = msg(vec![
+            ("dataType", en("PROP_REF")),
+            ("resolvedDataType", en(resolved)),
+            ("value", msg(vec![("propRefValue", msg(vec![("defId", guid(5, l))]))])),
+        ]);
+        ("parameterConsumptionMap", msg(vec![("entries", V::Array(vec![msg(vec![("variableData", data), ("variableField", en(field))])]))]))
+    };
+    let card2 = node(
+        (2, 50),
+        (0, 1),
+        "f",
+        "SYMBOL",
+        "Card 2",
+        vec![
+            size(100.0, 24.0),
+            (
+                "componentPropDefs",
+                V::Array(vec![
+                    def(11, "Show badge", "BOOL", bool_v(true)),
+                    def(12, "Icon", "INSTANCE_SWAP", symbol_v(20)),
+                    def(13, "Label", "TEXT", text_v("Go")),
+                ]),
+            ),
+        ],
+    );
+    let badge2 = node((2, 51), (2, 50), "a", "RECTANGLE", "Badge", vec![size(8.0, 8.0), pcm(11, "VISIBLE", "BOOLEAN")]);
+    let slot2 = node(
+        (2, 52),
+        (2, 50),
+        "b",
+        "INSTANCE",
+        "Slot",
+        vec![size(16.0, 16.0), ("symbolData", msg(vec![("symbolID", guid(2, 20))])), pcm(12, "OVERRIDDEN_SYMBOL_ID", "SYMBOL_ID")],
+    );
+    let label2 = node((2, 53), (2, 50), "c", "TEXT", "Label", vec![size(40.0, 16.0), ("textData", text_data("Go")), pcm(13, "TEXT_DATA", "TEXT_DATA")]);
+    let card_c = node(
+        (2, 60),
+        (0, 1),
+        "g",
+        "INSTANCE",
+        "Card C",
+        vec![
+            size(100.0, 24.0),
+            ("symbolData", msg(vec![("symbolID", guid(2, 50))])),
+            (
+                "componentPropAssignments",
+                V::Array(vec![assign(11, "varValue", bool_v(false)), assign(12, "varValue", symbol_v(30)), assign(13, "varValue", text_v("New"))]),
+            ),
+        ],
+    );
+
     msg(vec![
-        ("nodeChanges", V::Array(vec![card_a, card_b, label, slot, badge, card, people, users_icon, gear, gear_icon, page, doc])),
+        (
+            "nodeChanges",
+            V::Array(vec![card_a, card_b, card_c, label, slot, badge, card, label2, slot2, badge2, card2, people, users_icon, gear, gear_icon, page, doc]),
+        ),
         ("blobs", V::Array(vec![])),
     ])
 }

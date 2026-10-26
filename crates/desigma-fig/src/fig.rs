@@ -700,16 +700,25 @@ fn component_props(m: &mut Map<String, Value>, nc: &Value, lk: &Lk) {
     if !vals.is_empty() {
         m.insert("componentProperties".into(), Value::Object(vals));
     }
+    let ref_field = |f: Option<&str>| match f {
+        Some("VISIBLE") => Some("visible"),
+        Some("TEXT_DATA") => Some("characters"),
+        Some("OVERRIDDEN_SYMBOL_ID") => Some("mainComponent"),
+        _ => None,
+    };
     let mut refs = Map::new();
     for r in rest_import::farr(nc, "componentPropRefs") {
         let Some((key, _)) = lk.prop_def(r) else { continue };
-        let field = match fstr(r, "componentPropNodeField") {
-            Some("VISIBLE") => "visible",
-            Some("TEXT_DATA") => "characters",
-            Some("OVERRIDDEN_SYMBOL_ID") => "mainComponent",
-            _ => continue,
-        };
+        let Some(field) = ref_field(fstr(r, "componentPropNodeField")) else { continue };
         refs.insert(field.into(), key.clone().into());
+    }
+    // Newer files bind through `parameterConsumptionMap`: a PROP_REF
+    // variable whose `propRefValue.defId` names the property.
+    for e in nc.get("parameterConsumptionMap").map(|m| rest_import::farr(m, "entries")).unwrap_or(&[]) {
+        let Some(data) = e.get("variableData").filter(|d| fstr(d, "dataType") == Some("PROP_REF")) else { continue };
+        let def = data.get("value").and_then(|v| v.get("propRefValue")).and_then(|p| p.get("defId")).and_then(guid_str);
+        let (Some((key, _)), Some(field)) = (def.and_then(|d| lk.prop_defs.get(&d)), ref_field(fstr(e, "variableField"))) else { continue };
+        refs.entry(field).or_insert_with(|| key.clone().into());
     }
     if !refs.is_empty() {
         m.insert("componentPropertyReferences".into(), Value::Object(refs));
