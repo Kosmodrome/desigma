@@ -1157,11 +1157,31 @@ impl Ctx {
         for k in self.doc.get(d).map(|n| n.children.clone()).unwrap_or_default() {
             let _ = self.doc.remove(k);
         }
-        if let Some(NodeKind::Instance { component, component_key, .. }) = self.doc.get_mut(d).map(|n| &mut n.kind) {
-            *component = Some(target);
-            *component_key = None;
+        // Like Figma, a layer still named after its component takes the new
+        // component's name; a renamed one keeps its own. Name overrides are
+        // applied after the swap.
+        let rename = match (current.and_then(|c| self.display_name(c)), self.display_name(target)) {
+            (Some(old), Some(new)) if self.doc.get(d).is_some_and(|n| n.name == old) => Some(new),
+            _ => None,
+        };
+        if let Some(n) = self.doc.get_mut(d) {
+            if let NodeKind::Instance { component, component_key, .. } = &mut n.kind {
+                *component = Some(target);
+                *component_key = None;
+            }
+            if let Some(name) = rename {
+                n.name = name;
+            }
         }
         self.expand_instance(d, target);
+    }
+
+    /// Name an instance of `comp` gets by default: the component set's name
+    /// for a variant, else the component's own.
+    fn display_name(&self, comp: NodeId) -> Option<String> {
+        let c = self.doc.get(comp)?;
+        let set = c.parent.and_then(|p| self.doc.get(p)).filter(|p| matches!(p.kind, NodeKind::ComponentSet(_)));
+        Some(set.unwrap_or(c).name.clone())
     }
 
     /// `.fig` library components of internal-only canvases become external
