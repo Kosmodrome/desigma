@@ -246,13 +246,28 @@ pub fn figma_like_schema() -> Schema {
     enum_def(
         &mut b,
         "VariableDataType",
-        &["BOOLEAN", "FLOAT", "STRING", "ALIAS", "COLOR", "EXPRESSION", "TEXT_DATA", "KEYFRAME_TRACK_PARAMETER_DATA", "EASING", "TIMING", "VECTOR"],
+        &[
+            "BOOLEAN",
+            "FLOAT",
+            "STRING",
+            "ALIAS",
+            "COLOR",
+            "EXPRESSION",
+            "TEXT_DATA",
+            "KEYFRAME_TRACK_PARAMETER_DATA",
+            "EASING",
+            "TIMING",
+            "VECTOR",
+            "SYMBOL_ID",
+        ],
     );
     enum_def(
         &mut b,
         "VariableResolvedDataType",
-        &["BOOLEAN", "FLOAT", "STRING", "COLOR", "TEXT_DATA", "KEYFRAME_TRACK_PARAMETER_DATA", "EASING", "TIMING", "VECTOR"],
+        &["BOOLEAN", "FLOAT", "STRING", "COLOR", "TEXT_DATA", "KEYFRAME_TRACK_PARAMETER_DATA", "EASING", "TIMING", "VECTOR", "SYMBOL_ID"],
     );
+    enum_def(&mut b, "ComponentPropType", &["BOOL", "TEXT", "COLOR", "INSTANCE_SWAP", "VARIANT", "NUMBER"]);
+    enum_def(&mut b, "ComponentPropNodeField", &["VISIBLE", "TEXT_DATA", "OVERRIDDEN_SYMBOL_ID", "INHERIT_FILL_STYLE_ID"]);
     enum_def(&mut b, "ExpressionFunction", &["ADDITION", "KEYFRAME"]);
     enum_def(&mut b, "KeyframeTrackParameterType", &["INVALID", "MANUAL", "ANIMATION_PRESET"]);
     enum_def(
@@ -332,7 +347,11 @@ pub fn figma_like_schema() -> Schema {
     b.field(expr, "expressionFunction", ef, false, 1);
     b.field(expr, "expressionArguments", FieldType::Def(vd), true, 2);
     let (tdt, ktpvt, edt) = (def(&b, "TextData"), def(&b, "KeyframeTrackParameterValue"), def(&b, "EasingData"));
+    let siv = b.define("SymbolIdValue", DefKind::Message);
+    b.field(siv, "guid", gt, false, 1);
+    b.field(vany, "boolValue", nat(Bool), false, 1);
     b.field(vany, "floatValue", nat(Float), false, 3);
+    b.field(vany, "symbolIdValue", FieldType::Def(siv), false, 26);
     b.field(vany, "textDataValue", tdt, false, 10);
     b.field(vany, "expressionValue", FieldType::Def(expr), false, 6);
     b.field(vany, "keyframeTrackParameterValue", ktpvt, false, 20);
@@ -355,7 +374,9 @@ pub fn figma_like_schema() -> Schema {
     let apdt = def(&b, "AnimationPresetData");
     b.field(aps, "presets", apdt, true, 1);
     let cpv = b.define("ComponentPropValue", DefKind::Message);
+    b.field(cpv, "boolValue", nat(Bool), false, 1);
     b.field(cpv, "textValue", tdt, false, 2);
+    b.field(cpv, "guidValue", gt, false, 3);
     b.field(cpv, "floatValue", nat(Float), false, 4);
     b.field(cpv, "easingData", edt, false, 5);
     let cpa = b.define("ComponentPropAssignment", DefKind::Message);
@@ -366,6 +387,14 @@ pub fn figma_like_schema() -> Schema {
     let cpd = b.define("ComponentPropDef", DefKind::Message);
     b.field(cpd, "id", gt, false, 1);
     b.field(cpd, "name", nat(String), false, 2);
+    b.field(cpd, "initialValue", cpvt, false, 3);
+    let cptt = def(&b, "ComponentPropType");
+    b.field(cpd, "type", cptt, false, 4);
+    b.field(cpd, "varValue", vdt2, false, 5);
+    let cpr = b.define("ComponentPropRef", DefKind::Message);
+    let cpnf = def(&b, "ComponentPropNodeField");
+    b.field(cpr, "defID", gt, false, 1);
+    b.field(cpr, "componentPropNodeField", cpnf, false, 2);
     let fr = b.define("FrameRate", DefKind::Message);
     b.field(fr, "numerator", nat(Uint), false, 1);
     b.field(fr, "denominator", nat(Uint), false, 2);
@@ -515,6 +544,8 @@ pub fn figma_like_schema() -> Schema {
     f(&mut b, "backingCodeComponentId", apid_t, false);
     f(&mut b, "componentPropAssignments", cpa_t, true);
     f(&mut b, "componentPropDefs", cpd_t, true);
+    let cpr_t = def(&b, "ComponentPropRef");
+    f(&mut b, "componentPropRefs", cpr_t, true);
     f(&mut b, "easingData", ed_t, false);
     f(&mut b, "keyframeValue", kvd_t, false);
     f(&mut b, "motionPathBezierHandles", bh_t, false);
@@ -1096,6 +1127,94 @@ pub fn nested_swap_fig(how: Compression) -> Vec<u8> {
     let root = schema.find("Message").unwrap();
     let body = schema.encode_message(root, &nested_swap_message()).unwrap();
     container::write_container(&schema.encode(), &body, how, 101)
+}
+
+/// Component properties in both value shapes (see `tests/fig_prop_values.rs`):
+/// "Card" defines a boolean, an instance-swap and a text property with
+/// `varValue` defaults; "Card A" assigns them through `varValue` only (newer
+/// files), "Card B" through the plain `value` (older files).
+pub fn prop_values_message() -> V {
+    let doc = node((0, 0), (0, 0), "!", "DOCUMENT", "Document", vec![]);
+    let page = node((0, 1), (0, 0), "a", "CANVAS", "Page 1", vec![]);
+    let size = |w: f32, h: f32| ("size", vec2(w, h));
+    let var = |ty: &str, value: V| msg(vec![("dataType", en(ty)), ("resolvedDataType", en(ty)), ("value", value)]);
+    let bool_v = |b: bool| var("BOOLEAN", msg(vec![("boolValue", V::Bool(b))]));
+    let symbol_v = |l: u32| var("SYMBOL_ID", msg(vec![("symbolIdValue", msg(vec![("guid", guid(2, l))]))]));
+    let text_v = |s: &str| var("TEXT_DATA", msg(vec![("textDataValue", text_data(s))]));
+    let def = |l: u32, name: &str, ty: &str, v: V| msg(vec![("id", guid(5, l)), ("name", V::String(name.into())), ("type", en(ty)), ("varValue", v)]);
+    let pref = |l: u32, field: &str| msg(vec![("defID", guid(5, l)), ("componentPropNodeField", en(field))]);
+    let refs = |l: u32, field: &str| ("componentPropRefs", V::Array(vec![pref(l, field)]));
+
+    let gear_icon = node((2, 20), (0, 1), "a", "SYMBOL", "Icon / settings", vec![size(16.0, 16.0)]);
+    let gear = node((2, 21), (2, 20), "a", "RECTANGLE", "Gear", vec![size(16.0, 16.0)]);
+    let users_icon = node((2, 30), (0, 1), "b", "SYMBOL", "Icon / users", vec![size(16.0, 16.0)]);
+    let people = node((2, 31), (2, 30), "a", "RECTANGLE", "People", vec![size(16.0, 16.0)]);
+
+    let card = node(
+        (2, 10),
+        (0, 1),
+        "c",
+        "SYMBOL",
+        "Card",
+        vec![
+            size(100.0, 24.0),
+            (
+                "componentPropDefs",
+                V::Array(vec![
+                    def(1, "Show badge", "BOOL", bool_v(true)),
+                    def(2, "Icon", "INSTANCE_SWAP", symbol_v(20)),
+                    def(3, "Label", "TEXT", text_v("Go")),
+                ]),
+            ),
+        ],
+    );
+    let badge = node((2, 11), (2, 10), "a", "RECTANGLE", "Badge", vec![size(8.0, 8.0), refs(1, "VISIBLE")]);
+    let slot = node(
+        (2, 12),
+        (2, 10),
+        "b",
+        "INSTANCE",
+        "Slot",
+        vec![size(16.0, 16.0), ("symbolData", msg(vec![("symbolID", guid(2, 20))])), refs(2, "OVERRIDDEN_SYMBOL_ID")],
+    );
+    let label = node((2, 13), (2, 10), "c", "TEXT", "Label", vec![size(40.0, 16.0), ("textData", text_data("Go")), refs(3, "TEXT_DATA")]);
+
+    let assign = |l: u32, key: &str, v: V| msg(vec![("defID", guid(5, l)), (key, v)]);
+    let instance = |id: u32, pos: &str, name: &str, assignments: Vec<V>| {
+        node(
+            (2, id),
+            (0, 1),
+            pos,
+            "INSTANCE",
+            name,
+            vec![size(100.0, 24.0), ("symbolData", msg(vec![("symbolID", guid(2, 10))])), ("componentPropAssignments", V::Array(assignments))],
+        )
+    };
+    let card_a =
+        instance(40, "d", "Card A", vec![assign(1, "varValue", bool_v(false)), assign(2, "varValue", symbol_v(30)), assign(3, "varValue", text_v("Buy"))]);
+    let card_b = instance(
+        41,
+        "e",
+        "Card B",
+        vec![
+            assign(1, "value", msg(vec![("boolValue", V::Bool(false))])),
+            assign(2, "value", msg(vec![("guidValue", guid(2, 30))])),
+            assign(3, "value", msg(vec![("textValue", text_data("Old"))])),
+        ],
+    );
+
+    msg(vec![
+        ("nodeChanges", V::Array(vec![card_a, card_b, label, slot, badge, card, people, users_icon, gear, gear_icon, page, doc])),
+        ("blobs", V::Array(vec![])),
+    ])
+}
+
+/// `.fig` bytes for [`prop_values_message`].
+pub fn prop_values_fig(how: Compression) -> Vec<u8> {
+    let schema = figma_like_schema();
+    let root = schema.find("Message").unwrap();
+    let body = schema.encode_message(root, &prop_values_message()).unwrap();
+    container::write_container(&schema.encode(), &body, how, 106)
 }
 
 // ---- Figma Motion fixture (see `tests/motion_import.rs`); all values are made up.
