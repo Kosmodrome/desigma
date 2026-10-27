@@ -260,7 +260,9 @@ impl App {
         self.toast = Some(Toast { text: text.into(), until: self.now + theme::TOAST_SECONDS, error });
     }
 
-    /// Marks the document as modified so the canvas texture is re-rendered.
+    /// Marks the document as modified so the canvas texture is re-rendered. Not for view
+    /// changes (pan, zoom): the renderers follow the viewport by themselves, and a revision bump
+    /// re-indexes the page and makes autosave hash the whole document.
     pub fn changed(&mut self) {
         self.canvas.dirty = true;
     }
