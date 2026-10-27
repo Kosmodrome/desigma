@@ -374,9 +374,14 @@ impl Library {
 
     /// Overwrites the file's contents atomically and bumps its modified time.
     pub fn save_file(&self, id: &str, doc: &Document) -> Result<()> {
+        self.save_file_json(id, &doc.to_json()?)
+    }
+
+    /// [`Self::save_file`] with the document already serialized by [`Document::to_json`].
+    pub fn save_file_json(&self, id: &str, json: &str) -> Result<()> {
         let _guard = write_lock();
         let (mut m, i) = self.find_file(id)?;
-        write_atomic(&self.file_path(&m.project.id, id), doc.to_json()?.as_bytes())?;
+        write_atomic(&self.file_path(&m.project.id, id), json.as_bytes())?;
         let now = now_ms();
         m.files[i].modified = now;
         m.project.modified = now;
