@@ -236,7 +236,8 @@ pub(crate) fn figma_id(doc: &Document, id: NodeId) -> String {
 }
 
 /// `componentPropertyDefinitions` (components and sets), `componentProperties`
-/// (instances: the chosen values, plus the variant of the component they show)
+/// (instances: every property of their component, at the chosen value or its
+/// default, with variants read from the name of the component they show)
 /// and `componentPropertyReferences` (bound layers). Keys are property names;
 /// the importer drops Figma's `#<id>` suffix, so there is none to restore.
 fn component_props(doc: &Document, node: &Node, m: &mut Map<String, Value>) {
@@ -275,6 +276,12 @@ fn component_props(doc: &Document, node: &Node, m: &mut Map<String, Value>) {
     }
     if let NodeKind::Instance { component: Some(c), .. } = node.kind {
         let mut vals = Map::new();
+        // Like the REST API, list every property: unassigned ones at their default.
+        for p in prop_defs(doc, c) {
+            if let Some((ty, v)) = value(&p.default) {
+                vals.insert(p.name, json!({"type": ty, "value": v}));
+            }
+        }
         let comp = doc.get(c);
         if comp.and_then(|c| c.parent).and_then(|p| doc.get(p)).is_some_and(|p| matches!(p.kind, NodeKind::ComponentSet(_))) {
             for (k, v) in parse_variant_name(comp.map(|c| c.name.as_str()).unwrap_or_default()) {
