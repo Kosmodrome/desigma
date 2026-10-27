@@ -11,6 +11,10 @@ private local copies and are never committed. "Confirmed" means seen in at
 least one of them. "Unconfirmed" means the name is a guess (kept because it is
 harmless when absent) or was never present in these files.
 
+A third file, a game UI file (`game-ui.fig`, about 47k node changes, container
+version 106, private as well), was checked node by node against the REST API's
+JSON for the same file; rows that say "the third file" refer to it.
+
 Dump any file with `cargo run --release -p desigma-fig --example fig2json -- file.fig`
 and render its frames with `--example fig_render`.
 
@@ -77,6 +81,7 @@ and render its frames with `--example fig_render`.
 | Component set | `FRAME` with `isStateGroup: true`, `stateGroupPropertyValueOrders [{property, values}]`; variants carry `variantPropSpecs [{propDefId, value}]` | confirmed |
 | Instance | `symbolData {symbolID, symbolOverrides [...], uniformScaleFactor}`, `derivedSymbolData [...]`, `derivedSymbolDataLayoutVersion`, `propsAreBubbled`. **Instances never store children** | confirmed |
 | Override paths | `guidPath {guids [..]}` holds `overrideKey` values, not node guids (1 to 3 entries; nested instances take two or more) | confirmed |
+| Instance copy ids | REST names a copied node `I<instance>;<a>;<b>`: one `I`, then the flat path. A segment is the node's `overrideKey` when it has one (the library-side id of a library component copy), else its guid. Matches REST ids for all 10,127 instance-internal nodes of the third file | confirmed |
 | Override content | any NodeChange fields: `size`, `transform`, `fillPaints`, `strokePaints`, `strokeWeight`, `textData`, `fontName`, `styleIdForFill` (`{assetRef}`), `fillGeometry`, `strokeGeometry`, ... | confirmed |
 | Nested instance swap | override entry `{guidPath: [<slot>], overriddenSymbolID: <SYMBOL guid>}` replaces the nested instance's component; deeper entries under `[<slot>, ...]` then address the swapped component's children | confirmed (product UI file: list rows swapping their icon slot) |
 | Override paints bound to variables | `fillPaints` / `strokePaints` inside an override entry carry `colorVar` like node paints do; the literal `color` beside the alias can be stale (a dark-theme text override stored `#0A0A0A` next to an alias whose value is near-white), so the variable's value wins | confirmed (product UI file: dark-theme instances recolouring component text) |
