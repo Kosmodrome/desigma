@@ -412,8 +412,9 @@ pub fn apply(app: &mut App, act: Act) {
         Act::JoinSession => app.open_join(None),
         Act::Import => {
             let paths = rfd::FileDialog::new()
-                .add_filter("Design files", &["fig", "json", "svg", "desigma"])
+                .add_filter("Design files", &["fig", "pen", "json", "svg", "desigma"])
                 .add_filter("Figma file", &["fig"])
+                .add_filter("Pencil file", &["pen"])
                 .add_filter("SVG", &["svg"])
                 .add_filter("JSON", &["json"])
                 .add_filter("desigma", &["desigma"])

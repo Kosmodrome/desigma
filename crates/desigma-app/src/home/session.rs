@@ -45,8 +45,13 @@ impl Autosave {
 }
 
 pub(crate) fn doc_hash(doc: &Document) -> u64 {
+    json_hash(&doc.to_json().unwrap_or_default())
+}
+
+/// [`doc_hash`] of a document already serialized by [`Document::to_json`].
+fn json_hash(json: &str) -> u64 {
     let mut h = std::collections::hash_map::DefaultHasher::new();
-    doc.to_json().unwrap_or_default().hash(&mut h);
+    json.hash(&mut h);
     h.finish()
 }
 
@@ -198,17 +203,30 @@ impl App {
 
     /// Writes the open library file (no toast); also refreshes its thumbnail.
     pub fn save_library_file(&mut self) -> Result<(), String> {
+        self.write_library_file(false).map(|_| ())
+    }
+
+    /// [`Self::save_library_file`]; with `only_changes` a document identical to the saved one is
+    /// not rewritten. The document is serialized once, for both the comparison and the write.
+    /// Returns whether the file was written.
+    fn write_library_file(&mut self, only_changes: bool) -> Result<bool, String> {
         crate::decks::ui::flush_notes(self);
         let (Some(lib), Some(lf)) = (self.lib.clone(), self.lib_file.clone()) else { return Err("This file is not in the library".into()) };
         if self.history.viewing.is_some() {
             // an old version is on screen: the file on disk must keep the live document
             return Err("Go back to the current version before saving".into());
         }
-        lib.save_file(&lf.id, &self.doc).map_err(|e| format!("Cannot save: {e}"))?;
-        self.autosave.saved_hash = doc_hash(&self.doc);
+        let json = self.doc.to_json().map_err(|e| format!("Cannot save: {e}"))?;
+        let hash = json_hash(&json);
+        if only_changes && hash == self.autosave.saved_hash {
+            self.autosave.changed_at = None;
+            return Ok(false);
+        }
+        lib.save_file_json(&lf.id, &json).map_err(|e| format!("Cannot save: {e}"))?;
+        self.autosave.saved_hash = hash;
         self.autosave.changed_at = None;
         thumb::refresh_in_background(lib, lf.id, self.export_doc().into_owned());
-        Ok(())
+        Ok(true)
     }
 
     /// Ctrl+S on a library file.
@@ -227,8 +245,8 @@ impl App {
         if self.history.viewing.is_some() {
             return;
         }
-        if self.lib_file.is_some() && doc_hash(&self.doc) != self.autosave.saved_hash {
-            if let Err(e) = self.save_library_file() {
+        if self.lib_file.is_some() {
+            if let Err(e) = self.write_library_file(true) {
                 self.show_toast(e, true);
             }
         }
@@ -261,11 +279,9 @@ impl App {
             self.autosave.confirmed = true;
         } else if self.autosave.confirmed && self.now - t >= AUTOSAVE_IDLE {
             self.autosave.changed_at = None;
-            if doc_hash(&self.doc) != self.autosave.saved_hash {
-                match self.save_library_file() {
-                    Ok(()) => self.autosave.saves += 1,
-                    Err(e) => self.show_toast(e, true),
-                }
+            match self.write_library_file(true) {
+                Ok(written) => self.autosave.saves += u32::from(written),
+                Err(e) => self.show_toast(e, true),
             }
             return;
         }
