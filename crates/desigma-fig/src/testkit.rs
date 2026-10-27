@@ -1091,6 +1091,8 @@ pub fn nested_swap_message() -> V {
 
     let row = node((2, 30), (0, 1), "c", "SYMBOL", "ListRow", vec![size(100.0, 24.0)]);
     let slot = node((2, 31), (2, 30), "a", "INSTANCE", "Icon", vec![size(16.0, 16.0), ("symbolData", msg(vec![("symbolID", guid(2, 10))]))]);
+    // A second slot that still carries its component's name.
+    let slot2 = node((2, 32), (2, 30), "b", "INSTANCE", "Icon / settings", vec![size(16.0, 16.0), ("symbolData", msg(vec![("symbolID", guid(2, 10))]))]);
 
     let row_a = node(
         (2, 40),
@@ -1110,6 +1112,7 @@ pub fn nested_swap_message() -> V {
                         V::Array(vec![
                             ov(&[(2, 31)], vec![("overriddenSymbolID", guid(2, 20))]),
                             ov(&[(2, 31), (2, 21)], vec![("fillPaints", V::Array(vec![solid(1.0, 0.0, 0.0)]))]),
+                            ov(&[(2, 32)], vec![("overriddenSymbolID", guid(2, 20))]),
                         ]),
                     ),
                 ]),
@@ -1125,7 +1128,10 @@ pub fn nested_swap_message() -> V {
         vec![size(100.0, 24.0), ("transform", matrix(0.0, 200.0)), ("symbolData", msg(vec![("symbolID", guid(2, 30))]))],
     );
 
-    msg(vec![("nodeChanges", V::Array(vec![row_a, row_b, slot, row, people2, people, users_icon, gear, gear_icon, page, doc])), ("blobs", V::Array(vec![]))])
+    msg(vec![
+        ("nodeChanges", V::Array(vec![row_a, row_b, slot, slot2, row, people2, people, users_icon, gear, gear_icon, page, doc])),
+        ("blobs", V::Array(vec![])),
+    ])
 }
 
 /// `.fig` bytes for [`nested_swap_message`].
