@@ -87,9 +87,9 @@ and render its frames with `--example fig_render`.
 | Override paints bound to variables | `fillPaints` / `strokePaints` inside an override entry carry `colorVar` like node paints do; the literal `color` beside the alias can be stale (a dark-theme text override stored `#0A0A0A` next to an alias whose value is near-white), so the variable's value wins | confirmed (product UI file: dark-theme instances recolouring component text) |
 | Derived data | per path: `size`, `transform`, `fillGeometry`, `strokeGeometry` | confirmed |
 | Scale | `uniformScaleFactor` != 1 on instances made with the scale tool: copied contents scale by it | confirmed |
-| Property defs | `componentPropDefs [{id, name, type BOOL/TEXT/VARIANT/INSTANCE_SWAP, initialValue {boolValue / textValue{characters} / guidValue}, varValue, preferredValues, sortPosition}]` on the set; variants carry bare `{id, parentPropDefId}` aliases | confirmed |
-| Property values | instance `componentPropAssignments [{defID, value {boolValue / textValue / guidValue}, varValue}]` | confirmed |
-| Property refs | node `componentPropRefs [{defID, componentPropNodeField VISIBLE / TEXT_DATA / OVERRIDDEN_SYMBOL_ID}]`, with `parameterConsumptionMap` repeating them. All defIDs go through `parentPropDefId` | confirmed |
+| Property defs | `componentPropDefs [{id, name, type BOOL/TEXT/VARIANT/INSTANCE_SWAP, initialValue {boolValue / textValue{characters} / guidValue}, varValue, preferredValues, sortPosition}]` on the set; variants carry bare `{id, parentPropDefId}` aliases. In a third file nearly every def had only `varValue {dataType, resolvedDataType, value {boolValue / textDataValue{characters} / symbolIdValue{guid}}}` and no `initialValue` | confirmed |
+| Property values | instance `componentPropAssignments [{defID, value {boolValue / textValue / guidValue}, varValue}]`; `value` may be absent, leaving only `varValue` (same shape as in defs): 1,602 of 1,710 instance swaps and 86 of 185 booleans in the third file | confirmed |
+| Property refs | node `componentPropRefs [{defID, componentPropNodeField VISIBLE / TEXT_DATA / OVERRIDDEN_SYMBOL_ID}]`, with `parameterConsumptionMap` repeating them. The third file has no `componentPropRefs` at all: only `parameterConsumptionMap {entries [{variableField VISIBLE / TEXT_DATA / OVERRIDDEN_SYMBOL_ID, variableData {dataType PROP_REF, value {propRefValue {defId}}}}]}`. All defIDs go through `parentPropDefId` | confirmed |
 | Detached | `detachedSymbolId {assetRef}` | confirmed, ignored |
 
 ## Styles and libraries
