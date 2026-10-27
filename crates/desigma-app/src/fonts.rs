@@ -39,7 +39,7 @@ impl FontLoader {
             .map(|r| r.family.clone())
             .filter(|family| desigma_render::resolve_font(family, 400, false).is_some_and(|f| f.family.eq_ignore_ascii_case(family)))
             .collect();
-        let doc = doc.clone();
+        let doc = doc.clone_without_images();
         let (tx, rx) = channel();
         std::thread::spawn(move || {
             let report = ensure_fonts_with(&doc, &FontCache::new(), |family| installed.contains(family));

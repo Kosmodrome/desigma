@@ -757,15 +757,11 @@ impl App {
     pub fn fit_all(&mut self) {
         let b = self.page_bounds().unwrap_or(Rect::new(0.0, 0.0, 800.0, 600.0));
         self.view = View::fit(b, self.canvas_rect.size());
-        self.changed();
     }
 
     pub fn fit_selection(&mut self) {
         match self.selection_bounds() {
-            Some(b) => {
-                self.view = View::fit(b, self.canvas_rect.size());
-                self.changed();
-            }
+            Some(b) => self.view = View::fit(b, self.canvas_rect.size()),
             None => self.fit_all(),
         }
     }
@@ -776,13 +772,11 @@ impl App {
         let z = zoom.clamp(theme::ZOOM_MIN, theme::ZOOM_MAX);
         let size = self.canvas_rect.size();
         self.view = View { zoom: z, offset: Vec2::new(b.x + b.w / 2.0 - size.x / 2.0 / z, b.y + b.h / 2.0 - size.y / 2.0 / z) };
-        self.changed();
     }
 
     pub fn zoom_to(&mut self, zoom: f32) {
         let c = self.canvas_rect.center();
         self.view.zoom_at(self.canvas_rect.min, c, zoom);
-        self.changed();
     }
 
     pub fn zoom_by(&mut self, factor: f32) {
